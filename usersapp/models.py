@@ -1,8 +1,3 @@
-# pyright: reportIncompatibleVariableOverride=false
-# pyright: reportIncompatibleMethodOverride=false
-# pyright: reportArgumentType=false
-# pyright: reportAttributeAccessIssue=false
-
 import random
 from datetime import datetime, timedelta
 
