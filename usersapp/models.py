@@ -34,9 +34,9 @@ class User(AbstractUser, BaseModel):
         default="users_photo/default_user.png",
         null=True,
         blank=True,
-        validators=FileExtensionValidator(
+        validators=[FileExtensionValidator(
             allowed_extensions=["png", "jpg", "jpeg", "heic"]
-        ),
+        )],
     )
 
     def __str__(self):
@@ -58,7 +58,7 @@ class UserConfirmation(BaseModel):
     VERIFY_TYPE = ((VIA_EMAIL, VIA_EMAIL), (VIA_PHONE, VIA_PHONE))
     code = models.CharField(max_length=4)
     verify_type = models.CharField(max_length=29, choices=VERIFY_TYPE)
-    user = models.ForeignKey("users.User", on_delete=models.CASCADE)
+    user = models.ForeignKey("usersapp.User", on_delete=models.CASCADE)
     expiration_time = models.DateTimeField()
     confirmed = models.BooleanField(default=False)
 
