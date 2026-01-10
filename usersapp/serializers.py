@@ -1,9 +1,10 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .models import VIA_EMAIL, VIA_PHONE, User
+from .models import VIA_EMAIL, VIA_PHONE, User, CODE_VERIFIED, DONE, PHOTO_DONE
 
-from sharedapp.utility import email_or_phone_number 
+from sharedapp.utility import email_or_phone_number
+from django.contrib.auth.password_validation import validate_password
 
 
 class SignUpSerializer(serializers.ModelSerializer):
@@ -85,3 +86,57 @@ class SignUpSerializer(serializers.ModelSerializer):
         data = super(SignUpSerializer, self).to_representation(instance)
         data.update(instance.token())
         return data
+
+
+class UserChangeInfoSerializer(serializers.Serializer):
+    first_name = serializers.CharField(required=False)
+    last_name = serializers.CharField(required=False)
+    username = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
+    confirm_password = serializers.CharField(required=False)
+
+    def validate(self, data):
+        password = data.get('password', None)
+        confirm_password = data.get('password', None)
+
+        if password and confirm_password and password != confirm_password:
+            data = {
+                'success': False,
+                'message': "password mismatch"
+            }
+
+            raise ValidationError(data)
+        
+        if password:
+            validate_password(password)
+            validate_password(confirm_password)
+
+        return data
+
+    def validate_username(self, username:str):
+        if username.isdigit() or len(username) < 5:
+            data = {
+                'success': False,
+                'message': "password doesnt meet the requirement"
+            }
+
+            raise ValidationError(data)
+
+        return username
+
+    def update(self, instance, validated_data):
+        instance.username = validated_data.get('username', instance.username)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.password = validated_data.get('password', instance.password)
+
+        if validated_data.get('password'):
+            instance.set_password(validated_data.get('password'))
+        
+        if instance.auth_status == CODE_VERIFIED:
+            instance.auth_status = DONE
+        
+        instance.save()
+
+        return instance
+        

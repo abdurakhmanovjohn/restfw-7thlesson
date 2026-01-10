@@ -1,7 +1,7 @@
 from django.shortcuts import render
-from rest_framework.generics import CreateAPIView
+from rest_framework.generics import CreateAPIView, UpdateAPIView
 from rest_framework import permissions
-from .serializers import SignUpSerializer
+from .serializers import SignUpSerializer, UserChangeInfoSerializer
 from .models import *
 from rest_framework.validators import ValidationError
 from rest_framework.response import Response
@@ -50,3 +50,76 @@ class VerifyCodeView(CreateAPIView):
             user.save()
         
         return True
+
+
+class NewVerifyCodeView(CreateAPIView):
+    permission_classes = (permissions.IsAuthenticated)
+
+    def get(self, request):
+        user = request.user
+        self.check_code(user)
+
+        if user.auth_type == VIA_EMAIL:
+            code = user.generate_code(VIA_EMAIL)
+            # code = user.verify_code(VIA_EMAIL)
+            # send_mail(user.email, code)
+            print(code)
+        elif user.auth_type == VIA_PHONE:
+            code = user.generate_code(VIA_PHONE)
+            # code = user.verify_code(VIA_PHONE)
+            # send_phone_number_sms(user.phone_number, code)
+            print(code)
+        
+        data = {
+            'success': True,
+            'message': 'Code sent!'
+        }
+        
+        return Response(data)
+    
+    @staticmethod
+    def check_code(user):
+        verify = user.verify_codes.filter(confirmed=False, expiration_time__gte=datetime.now())
+
+        if verify.exists():
+            data = {
+                "success": False,
+                "message": "you have an active code"
+            }
+            raise ValidationError(data)
+
+        if user.auth_status != NEW:
+            data = {
+                'success': False,
+                'message': 'code already confirmed'
+            }
+            raise ValidationError(data)
+        
+        return True
+
+
+class UserChangeView(UpdateAPIView):
+    permission_classes = (permissions.IsAuthenticated)
+    queryset = User.objects.all()
+    serializer_class = UserChangeInfoSerializer
+
+    def get_object(self):
+        return self.request.user
+    
+    def update(self, request, *args, **kwargs):
+        super().update(request, *args, **kwargs)
+        data = {
+            'success': True,
+            'message': "info updated"
+        }
+
+        return Response(data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        super().update(request, *args, **kwargs)
+        data = {
+            'success': True,
+            'message': "info updated partially"
+        }
+
+        return Response(data)
